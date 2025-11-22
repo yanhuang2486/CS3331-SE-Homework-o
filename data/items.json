@@ -1,0 +1,13 @@
+[
+  {
+    "item_id": "5a34de8a-8256-4391-8f89-c84f4d28cb78",
+    "item_name": "三国演义",
+    "description": "属性: 作者=罗贯中; 出版社=明朝人出版社; ISBN=xxxx; 新旧程度=九成新\n四大名著",
+    "item_type": "书籍",
+    "image": "",
+    "contact_info": "54749110",
+    "status": "已发布",
+    "owner_id": "36250c09-a3c2-4f97-b162-342b79cc253f",
+    "create_time": "2025-11-22 15:50:42"
+  }
+]

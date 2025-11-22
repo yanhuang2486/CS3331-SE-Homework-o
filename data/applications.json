@@ -1,0 +1,18 @@
+[
+  {
+    "application_id": "dbb42974-700f-4fc7-b0b2-2049385b80ac",
+    "app_type": "成为管理员",
+    "content": "用户 zhangsan 申请成为管理员",
+    "app_status": "通过",
+    "applicant_id": "a35b8eb2-61d6-4d06-baad-8153967a109b",
+    "create_time": "2025-11-22 12:43:43"
+  },
+  {
+    "application_id": "c431594c-07de-48d8-8fc6-211e97b04697",
+    "app_type": "修改物品类型",
+    "content": "修改类型 '书籍': xxx",
+    "app_status": "待处理",
+    "applicant_id": "a35b8eb2-61d6-4d06-baad-8153967a109b",
+    "create_time": "2025-11-22 12:43:54"
+  }
+]

@@ -1,0 +1,11 @@
+resurrection_app/
+├── entities.py
+├── controllers.py
+├── ui.py
+├── main.py
+└── data/
+    ├── users.json
+    ├── items.json
+    ├── item_types.json
+    ├── demands.json
+    └── applications.json

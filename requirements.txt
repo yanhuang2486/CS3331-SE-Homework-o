@@ -1,0 +1,2 @@
+pyinstaller>=5.0
+# tkinter is part of the Python standard library on Windows; no pip install required

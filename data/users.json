@@ -1,0 +1,23 @@
+[
+  {
+    "user_id": "99b74942-cb87-4ed5-952b-5fd9c78cd58f",
+    "username": "admin",
+    "password": "123456",
+    "contact_info": "系统管理员",
+    "role": "管理员"
+  },
+  {
+    "user_id": "a35b8eb2-61d6-4d06-baad-8153967a109b",
+    "username": "zhangsan",
+    "password": "123456",
+    "contact_info": "123456",
+    "role": "管理员"
+  },
+  {
+    "user_id": "36250c09-a3c2-4f97-b162-342b79cc253f",
+    "username": "lisi",
+    "password": "123456",
+    "contact_info": "54749110",
+    "role": "普通用户"
+  }
+]

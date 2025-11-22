@@ -1,0 +1,54 @@
+[
+  {
+    "type_id": "1",
+    "type_name": "书籍",
+    "attributes": [
+      "作者",
+      "出版社",
+      "ISBN",
+      "新旧程度"
+    ]
+  },
+  {
+    "type_id": "2",
+    "type_name": "宿舍用品",
+    "attributes": [
+      "品牌",
+      "新旧程度",
+      "尺寸"
+    ]
+  },
+  {
+    "type_id": "3",
+    "type_name": "电子产品",
+    "attributes": [
+      "品牌",
+      "型号",
+      "新旧程度"
+    ]
+  },
+  {
+    "type_id": "4",
+    "type_name": "服装",
+    "attributes": [
+      "品牌",
+      "尺码",
+      "新旧程度"
+    ]
+  },
+  {
+    "type_id": "5",
+    "type_name": "体育用品",
+    "attributes": [
+      "品牌",
+      "新旧程度"
+    ]
+  },
+  {
+    "type_id": "6",
+    "type_name": "其他",
+    "attributes": [
+      "备注"
+    ]
+  }
+]
