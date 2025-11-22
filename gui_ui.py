@@ -1,7 +1,20 @@
-'''
+"""
 作者：yanhuang2486
-本文件目的：为“复活”软件提供与用户交互的GUI界面
-'''
+gui_ui.py
+---------
+GUI 界面模块，基于 tkinter/ttk 实现应用的所有窗口与对话框。
+
+模块级说明（全局/输入/输出/入口参数）:
+- 全局变量：`ThemeManager.PALETTE` 定义了应用的莫兰迪风格配色方案，供各窗口统一使用。
+- 输入数据：由上层 `main.py` 传入的控制器实例（`AuthController`, `ItemController`, `TypeController`, `DemandController`, `ApplicationController`）
+    以及用户在界面上输入的字符串（用户名、密码、物品信息等）。
+- 输出数据：多数交互操作会通过控制器方法将实体持久化（例如 `item_controller.add_item(...)`），
+    或返回布尔/列表结果用于界面反馈；界面本身不直接返回复杂数据结构。
+- 入口参数说明：每个对话框类的构造函数均以 `parent`（父窗口）为首参数，并接收相应的控制器对象和回调函数，
+    具体请参考各类 docstring（下方已标注）。
+
+注：本文件仅负责视图和与用户交互的逻辑，业务/持久化由 controllers 层处理（依赖注入）。
+"""
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
@@ -11,6 +24,12 @@ from entities import User, Item, ItemType, Demand, Application
 
 
 class FontManager:
+    """字体工具类。
+
+    提供统一的字体配置方法：`get_font` 和 `get_chinese_font`。
+    入口参数：size（字号）、weight（字重）
+    输出：用于 tkinter/ttk 的字体元组，例如 ("宋体", 12, "bold")。
+    """
     @staticmethod
     def get_font(size=10, weight="normal"):
         return ("Helvetica", size, weight)
@@ -20,7 +39,16 @@ class FontManager:
         return ("宋体", size, weight)
 
 class ThemeManager:
-    """Apply a simple Morandi-inspired minimalist theme to ttk widgets."""
+    """主题管理器，应用简约的莫兰迪色系样式到 ttk 部件。
+
+    全局/模块级变量：
+    - `PALETTE`：字典，定义背景、面板、按钮、输入框等颜色值，界面中的控件样式从此处读取以保持一致性。
+
+    方法：
+    - `apply(root)`：将样式应用到传入的 `tk.Tk` 根窗口上。
+
+    注意：此类只负责样式配置，不处理业务逻辑或数据。
+    """
     PALETTE = {
         # muted, desaturated Morandi-like colors
         'bg': '#E7E6E4',          # light neutral background
@@ -78,6 +106,16 @@ class ThemeManager:
 
 class LoginUI:
     def __init__(self, root, auth_controller: AuthController, on_login_success):
+        """登录界面主类。
+
+        构造参数:
+        - root: tkinter 根窗口或父窗口（`tk.Tk` 或 `tk.Toplevel`）
+        - auth_controller: `AuthController` 实例，用于执行登录/注册操作（输入数据由界面收集并传给 controller）
+        - on_login_success: 登录成功后的回调函数（无参数），用于切换到主界面
+
+        输出/副作用:
+        - 在成功登录后调用 `on_login_success()`；失败时显示错误对话框。
+        """
         self.root = root
         self.auth_controller = auth_controller
         self.on_login_success = on_login_success
@@ -90,6 +128,11 @@ class LoginUI:
         self.setup_ui()
     
     def setup_ui(self):
+        """构建登录界面元素并进行布局。
+
+        输入数据: 无（只构建控件）；用户通过界面输入用户名/密码并触发 `login()`。
+        输出数据: 无直接返回值，界面交互会调用 `auth_controller.login` 并在成功时触发回调。
+        """
         # create a container that fills the root, then center the actual frame inside it
         container = ttk.Frame(self.root)
         container.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
@@ -158,6 +201,14 @@ class LoginUI:
         self.root.bind('<Return>', lambda event: self.login())
     
     def login(self):
+        """执行登录动作。
+
+        入口参数（来自界面）：从 `self.username_entry` 和 `self.password_entry` 获取输入。
+        处理：调用 `self.auth_controller.login(username, password)`。
+        输出/副作用：
+        - 登录成功 -> 弹出提示并调用 `self.on_login_success()`；
+        - 登录失败或输入校验失败 -> 弹出错误提示。
+        """
         username = self.username_entry.get().strip()
         password = self.password_entry.get().strip()
         
@@ -175,6 +226,15 @@ class LoginUI:
         RegisterDialog(self.root, self.auth_controller)
 
 class RegisterDialog:
+    """用户注册对话框。
+
+    构造参数:
+    - parent: 父窗口
+    - auth_controller: `AuthController` 实例，用于调用 `register(username, password, contact_info)`
+
+    界面输入字段（入口参数）: 用户名、密码、联系方式。
+    输出/副作用: 成功注册后会向 `auth_controller` 请求持久化并关闭对话框，否则显示错误信息。
+    """
     def __init__(self, parent, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("用户注册")
@@ -223,6 +283,16 @@ class RegisterDialog:
             messagebox.showerror("错误", "用户名已存在")
 
 class MainUI:
+    """主界面类，包含普通用户与管理员的入口。
+
+    构造参数:
+    - root: 根窗口
+    - auth_controller: 认证控制器（用于获取当前用户信息）
+    - item_controller, type_controller, demand_controller, application_controller: 对应的控制器实例
+    - on_logout: 注销回调函数（用于返回登录界面）
+
+    作用/输出: 负责呈现主菜单、打开各功能对话框（发布物品、搜索、类型管理等），不直接返回数据。
+    """
     def __init__(self, root, auth_controller: AuthController, item_controller: ItemController, 
                  type_controller: TypeController, demand_controller: DemandController, 
                  application_controller: ApplicationController, on_logout):
@@ -339,6 +409,10 @@ class MainUI:
             ).grid(row=row, column=col, padx=5, pady=5, sticky=(tk.W, tk.E))
     
     def show_item_publish(self):
+        """打开发布物品对话框。
+
+        入口/输出: 无返回值；会实例化 `ItemPublishDialog`，该对话框在发布成功时调用 `item_controller.add_item(...)`。
+        """
         ItemPublishDialog(self.root, self.item_controller, self.type_controller, self.auth_controller)
     
     def show_item_search(self):
@@ -392,6 +466,18 @@ class MainUI:
             self.on_logout()
 
 class ItemPublishDialog:
+    """发布物品对话框。
+
+    构造参数:
+    - parent: 父窗口
+    - item_controller: `ItemController` 实例（用于持久化 add_item）
+    - type_controller: `TypeController`（用于获取类型与属性定义，输入数据来源）
+    - auth_controller: `AuthController`（用于获取当前用户 id 作为 owner_id）
+
+    界面输入/出口:
+    - 界面收集物品类型、属性字段、物品名称、描述、联系方式等输入；
+    - 点击发布后，调用 `item_controller.add_item(...)` 将数据写入 `data/items.json`（输出/副作用）。
+    """
     def __init__(self, parent, item_controller: ItemController, type_controller: TypeController, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("发布物品")
@@ -482,6 +568,18 @@ class ItemPublishDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def publish_item(self):
+        """收集表单字段并提交发布请求。
+
+        入口参数（从界面读取）:
+        - item_type: 物品类型（字符串）
+        - item_name: 物品名称
+        - item_desc: 物品描述
+        - contact_info: 联系方式
+        - attribute_entries: 动态生成的属性字段（字典）
+
+        处理: 将属性拼接为字符串前缀并与描述合并，调用 `item_controller.add_item`。
+        输出/副作用: 成功 -> 提示并关闭对话框；失败 -> 错误提示。
+        """
         item_type = self.type_var.get()
         item_name = self.name_entry.get().strip()
         item_desc = self.desc_text.get("1.0", tk.END).strip()
@@ -515,6 +613,11 @@ class ItemPublishDialog:
             messagebox.showerror("错误", "发布失败")
 
     def _build_attribute_fields(self):
+        """根据当前选择的物品类型动态生成属性输入栏。
+
+        入口参数: 从 `self.type_var` 获取所选类型名称；type_controller 提供类型定义对象。
+        输出: 在 `self.attrs_frame` 中创建 Label + Entry 控件，并将 Entry 存入 `self.attribute_entries` 以便后续读取。
+        """
         # 清理现有属性输入
         for child in self.attrs_frame.winfo_children():
             child.destroy()
@@ -534,6 +637,17 @@ class ItemPublishDialog:
             self.attribute_entries[attr] = e
 
 class ItemSearchDialog:
+    """闲置集市（物品搜索）对话框。
+
+    构造参数:
+    - parent: 父窗口
+    - item_controller: `ItemController`（用于执行 `search_items`）
+    - type_controller: `TypeController`（用于类型下拉数据）
+
+    输入/输出:
+    - 界面输入：类型筛选、关键词；
+    - 输出：在 Treeview 中显示查询结果；双击行可打开详情窗口（显示描述、属性、联系方式等）。
+    """
     def __init__(self, parent, item_controller: ItemController, type_controller: TypeController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("闲置集市")
@@ -603,6 +717,12 @@ class ItemSearchDialog:
         self.tree.bind("<Double-1>", lambda event: self.show_item_details())
     
     def search_items(self):
+        """执行搜索并将结果填入结果列表。
+
+        入口参数（从界面读取）: self.type_var（可能为 '所有类型'）、self.keyword_entry（关键词字符串）
+        处理: 调用 `item_controller.search_items(item_type, keyword)` 获取 Item 列表；
+        输出: 在 Treeview 中插入每条记录，并将 item 存入 `self._items_map` 以便后续查看详情。
+        """
         # 清空现有结果
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -641,6 +761,11 @@ class ItemSearchDialog:
             ), tags=(item.item_id,))
 
     def show_item_details(self):
+        """在新的对话框中展示选中物品的详细信息。
+
+        输入: 从 Treeview 的选中行读取 item_id，并从 `self._items_map` 获取对应 `Item` 对象。
+        输出: 打开一个只读详情窗口，显示名称、类型、属性、完整描述、联系方式、发布时间等。
+        """
         selection = self.tree.selection()
         if not selection:
             return
@@ -691,6 +816,15 @@ class ItemSearchDialog:
         ttk.Button(container, text="关闭", command=detail.destroy).grid(row=6, column=1, sticky=tk.E, pady=8)
 
 class MyItemsDialog:
+    """显示当前用户发布的物品窗口（包含修改/删除操作）。
+
+    构造参数:
+    - parent: 父窗口
+    - item_controller: `ItemController`（用于查询与删除/修改）
+    - auth_controller: `AuthController`（用于获取当前用户 id）
+
+    操作/副作用: 修改/删除会通过 `item_controller` 更新数据并持久化。
+    """
     def __init__(self, parent, item_controller: ItemController, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("我的发布")
@@ -739,6 +873,11 @@ class MyItemsDialog:
         self.tree.bind("<Double-1>", lambda event: self.modify_item())
     
     def load_items(self):
+        """从控制器加载当前用户的物品并填充列表。
+
+        输入: 使用 `auth_controller.current_user.user_id` 作为查询条件；
+        输出: 在 Treeview 中显示用户的物品条目（包括状态与发布时间）。
+        """
         # 清空现有结果
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -762,6 +901,10 @@ class MyItemsDialog:
         return self.tree.item(selection[0], "tags")[0]
     
     def modify_item(self):
+        """触发修改物品对话框（双击或点击修改按钮）。
+
+        入口: 选中的物品 id；输出: 弹出 `ModifyItemDialog`，在保存成功后回调刷新函数 `self.load_items`。
+        """
         item_id = self.get_selected_item_id()
         if item_id:
             ModifyItemDialog(self.dialog, self.item_controller, self.auth_controller, item_id, self.load_items)
@@ -779,6 +922,17 @@ class MyItemsDialog:
                 messagebox.showerror("错误", "删除失败")
 
 class ModifyItemDialog:
+    """修改物品对话框。
+
+    构造参数:
+    - parent: 父窗口
+    - item_controller: `ItemController`（用于保存修改）
+    - auth_controller: `AuthController`（用于权限校验）
+    - item_id: 要修改的物品 id（入口参数）
+    - on_success: 修改成功后的回调（可选）
+
+    方法 `save_changes` 将调用 `item_controller.modify_item(...)` 并在成功后触发回调。
+    """
     def __init__(self, parent, item_controller: ItemController, auth_controller: AuthController, item_id: str, on_success=None):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("修改物品")
@@ -839,6 +993,11 @@ class ModifyItemDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def save_changes(self):
+        """读取表单并提交物品修改。
+
+        输入: 表单字段（name、description、contact_info、status）；
+        输出/副作用: 成功 -> 持久化修改并触发回调/关闭对话框；失败 -> 错误提示。
+        """
         item_name = self.name_entry.get().strip()
         item_desc = self.desc_text.get("1.0", tk.END).strip()
         contact_info = self.contact_entry.get().strip()
@@ -864,6 +1023,16 @@ class ModifyItemDialog:
             messagebox.showerror("错误", "修改失败")
 
 class DemandPublishDialog:
+    """发布需求对话框。
+
+    构造参数:
+    - parent
+    - demand_controller: `DemandController`（用于 add_demand）
+    - type_controller: `TypeController`（用于类型选择）
+    - auth_controller: `AuthController`（获取当前用户 id）
+
+    输入/输出: 将用户输入的需求描述与联系方式组合并通过 `demand_controller.add_demand` 持久化。
+    """
     def __init__(self, parent, demand_controller: DemandController, type_controller: TypeController, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("发布需求")
@@ -910,6 +1079,7 @@ class DemandPublishDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def publish_demand(self):
+        """提交需求：收集类型、描述、联系方式并调用 `demand_controller.add_demand`。"""
         demand_type = self.type_var.get()
         description = self.desc_text.get("1.0", tk.END).strip()
         contact_info = self.contact_entry.get().strip()
@@ -932,6 +1102,11 @@ class DemandPublishDialog:
             messagebox.showerror("错误", "发布失败")
 
 class DemandsDialog:
+    """展示所有需求的界面（赏金客栈）。
+
+    构造参数: parent, demand_controller
+    输出: 在 Treeview 中列出所有需求；双击可查看详情。
+    """
     def __init__(self, parent, demand_controller: DemandController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("赏金客栈")
@@ -976,6 +1151,7 @@ class DemandsDialog:
         self.tree.bind("<Double-1>", self.show_demand_details)
     
     def load_demands(self):
+        """从 `demand_controller` 加载所有需求并显示在列表中。"""
         # 清空现有结果
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -992,6 +1168,7 @@ class DemandsDialog:
             ), tags=(demand.demand_id,))
     
     def show_demand_details(self, event):
+        """在对话框中弹出选中需求的详细信息窗口。"""
         selection = self.tree.selection()
         if not selection:
             return
@@ -1025,6 +1202,11 @@ class DemandsDialog:
             ttk.Button(frame, text="关闭", command=detail_dialog.destroy).grid(row=3, column=1, sticky=tk.E, pady=10)
 
 class UserInfoDialog:
+    """用户个人信息管理对话框。
+
+    构造参数: parent, auth_controller
+    功能: 修改用户联系方式和密码（如提供），通过 `auth_controller.modify_user_info` 持久化变更。
+    """
     def __init__(self, parent, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("个人信息管理")
@@ -1070,6 +1252,7 @@ class UserInfoDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def save_changes(self):
+        """保存用户信息变更：读取密码与联系方式并调用 `auth_controller.modify_user_info`。"""
         password = self.password_entry.get().strip()
         contact_info = self.contact_entry.get().strip()
         
@@ -1087,6 +1270,11 @@ class UserInfoDialog:
             messagebox.showerror("错误", "修改失败")
 
 class TypeApplicationDialog:
+    """申请修改物品类型的对话框。
+
+    入口参数: parent, application_controller, type_controller, auth_controller
+    用户输入申请内容并提交，最终调用 `application_controller.add_application` 创建申请记录（输出/副作用）。
+    """
     def __init__(self, parent, application_controller: ApplicationController, type_controller: TypeController, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("申请修改物品类型")
@@ -1147,6 +1335,7 @@ class TypeApplicationDialog:
             self.type_frame.grid_remove()
     
     def submit_application(self):
+        """提交类型修改/新增申请，将整理后的内容传递给 `application_controller.add_application`。"""
         app_type = self.app_type_var.get()
         content = self.content_text.get("1.0", tk.END).strip()
         
@@ -1174,6 +1363,11 @@ class TypeApplicationDialog:
             messagebox.showerror("错误", "申请失败")
 
 class TypeManagementDialog:
+    """类型管理对话框（管理员专用）。
+
+    功能: 列表显示所有类型，支持添加/修改/删除。删除时会检查是否有物品在使用该类型（防止误删）。
+    入口参数: parent, type_controller, application_controller, auth_controller
+    """
     def __init__(self, parent, type_controller: TypeController, application_controller: ApplicationController, auth_controller: AuthController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("类型管理")
@@ -1217,6 +1411,7 @@ class TypeManagementDialog:
         ttk.Button(button_frame, text="关闭", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def load_types(self):
+        """加载并显示所有物品类型（从 type_controller 获取）。"""
         # 清空现有结果
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -1245,6 +1440,11 @@ class TypeManagementDialog:
             ModifyTypeDialog(self.dialog, self.type_controller, type_id, self.load_types)
     
     def delete_type(self):
+        """删除所选类型（管理员操作）。
+
+        入口: 选择的类型 id；处理: 检查是否有物品正在使用该类型，若无则从类型列表中移除并保存。
+        输出/副作用: 修改 `item_types.json` 并刷新列表。
+        """
         type_id = self.get_selected_type_id()
         if not type_id:
             return
@@ -1272,6 +1472,10 @@ class TypeManagementDialog:
                 messagebox.showerror("错误", "类型不存在")
 
 class AddTypeDialog:
+    """添加类型对话框。
+
+    用户在文本框中按行输入属性名，点击添加会调用 `type_controller.add_item_type(type_name, attributes)`。
+    """
     def __init__(self, parent, type_controller: TypeController, on_success=None):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("添加类型")
@@ -1309,6 +1513,7 @@ class AddTypeDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def add_type(self):
+        """收集类型名称与属性列表并提交给 `type_controller.add_item_type`。"""
         type_name = self.name_entry.get().strip()
         attributes_text = self.attributes_text.get("1.0", tk.END).strip()
         
@@ -1327,6 +1532,11 @@ class AddTypeDialog:
             messagebox.showerror("错误", "类型名称已存在")
 
 class ModifyTypeDialog:
+    """修改类型对话框。
+
+    入口参数: type_id（要修改的类型 id），界面会加载当前名称与属性供编辑。
+    保存时调用 `type_controller.modify_item_type(type_id, type_name, attributes)`。
+    """
     def __init__(self, parent, type_controller: TypeController, type_id: str, on_success=None):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("修改类型")
@@ -1374,6 +1584,7 @@ class ModifyTypeDialog:
         ttk.Button(button_frame, text="取消", command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
     
     def save_changes(self):
+        """保存类型修改并调用控制器持久化。"""
         type_name = self.name_entry.get().strip()
         attributes_text = self.attributes_text.get("1.0", tk.END).strip()
         
@@ -1392,6 +1603,11 @@ class ModifyTypeDialog:
             messagebox.showerror("错误", "修改失败")
 
 class ApplicationApprovalDialog:
+    """管理员审批申请的对话框。
+
+    入口参数: parent, application_controller, auth_controller, type_controller
+    功能: 列出所有申请并支持批准/拒绝。批准可能触发其他控制器的变更（例如将用户升级为管理员）。
+    """
     def __init__(self, parent, application_controller: ApplicationController, auth_controller: AuthController, type_controller: TypeController):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("申请审批")
@@ -1466,6 +1682,11 @@ class ApplicationApprovalDialog:
         return self.tree.item(selection[0], "tags")[0]
     
     def approve_application(self):
+        """批准选中的申请。
+
+        过程: 根据申请类型执行相应的操作（例如将申请人设为管理员），然后调用
+        `application_controller.process_application(app_id, "通过")` 更新申请状态并持久化。
+        """
         app_id = self.get_selected_application_id()
         if not app_id:
             return
